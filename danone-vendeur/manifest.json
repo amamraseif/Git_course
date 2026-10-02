@@ -1,0 +1,16 @@
+{
+  "name": "يوم البائع — قائمة المهام اليومية",
+  "short_name": "يوم البائع",
+  "description": "تذكير البائع بمهامه اليومية بالترتيب: الشاحنة، الأدوات، التطبيق، الزبائن، المخزون، السوق، الهدف، الرجوع، المداخيل.",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f7fb",
+  "theme_color": "#0b4ea2",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
