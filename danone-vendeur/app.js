@@ -423,7 +423,7 @@ function renderMarket() {
     + fld('m_oos', 'نفاد المخزون', 'الزبائن والمنتجات المفقودة…')
     + fld('m_promo', 'العروض', 'عروض المنافسين، هدايا، تخفيضات…')
     + fld('m_client', 'الزبائن', 'شكاوى، طلبات، جودة…')
-    + `<div class="actions"><button class="btn wa" data-act="market-send">إرسال إلى قروب واتساب</button></div>
+    + `<div class="actions"><a class="btn wa" href="https://wa.me/" target="_blank" rel="noopener" data-act="market-send">إرسال إلى قروب واتساب</a></div>
        ${day.v.market_sent ? `<div class="alert ok">أُرسلت الساعة ${esc(day.v.market_sent)}</div>` : ''}`;
 }
 
@@ -515,7 +515,7 @@ function reportText() {
 function renderReport() {
   return `<pre class="field report">${esc(reportText())}</pre>
     <div class="actions">
-      <button class="btn wa" data-act="report-send">إرسال للمشرف عبر واتساب</button>
+      <a class="btn wa" href="https://wa.me/" target="_blank" rel="noopener" data-act="report-send">إرسال للمشرف عبر واتساب</a>
       <button class="btn ghost" data-act="report-copy">نسخ</button>
     </div>
     ${day.v.report_sent ? `<div class="alert ok">أُرسل الساعة ${esc(day.v.report_sent)}</div>` : ''}`;
@@ -675,9 +675,22 @@ function exportICS() {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
-function openWhatsApp(text, phone = '') {
-  const p = String(phone).replace(/\D/g, '');
-  window.open(`https://wa.me/${p}?text=${encodeURIComponent(text)}`, '_blank');
+// WhatsApp buttons are real links: the href is filled at tap time so the text is always current.
+const waLink = (text, phone = '') => `https://wa.me/${String(phone).replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
+
+// Two-tap confirmation inside the button itself (no browser dialogs).
+function armed(el, label) {
+  if (el.dataset.armed) return true;
+  const old = el.textContent;
+  el.dataset.armed = '1';
+  el.textContent = label;
+  setTimeout(() => { if (el.isConnected) { delete el.dataset.armed; el.textContent = old; } }, 3000);
+  return false;
+}
+function flash(el, label) {
+  const old = el.textContent;
+  el.textContent = label;
+  setTimeout(() => { if (el.isConnected) el.textContent = old; }, 1800);
 }
 
 /* ---------- Live refresh without losing input focus ---------- */
@@ -787,7 +800,8 @@ document.addEventListener('click', async (e) => {
     render();
     return;
   }
-  const act = e.target.closest('[data-act]')?.dataset.act;
+  const actEl = e.target.closest('[data-act]');
+  const act = actEl?.dataset.act;
   if (!act) return;
   switch (act) {
     case 'add-sku':
@@ -795,28 +809,35 @@ document.addEventListener('click', async (e) => {
       persist(); render(); break;
     case 'del-sku': {
       const i = Number(e.target.closest('[data-i]').dataset.i);
-      if (confirm(`حذف "${day.stock[i].name || 'المنتج'}"؟`)) { day.stock.splice(i, 1); persist(); render(); }
+      if (armed(actEl, 'تأكيد؟')) { day.stock.splice(i, 1); persist(); render(); }
       break;
     }
     case 'dash-log':
       day.dashLog.push({ time: nowHM(), visits: day.v.dash_visits || '', sales: day.v.dash_sales || '' });
       persist(); render(); break;
     case 'market-send':
-      openWhatsApp(marketText());
+      actEl.href = waLink(marketText());
       day.v.market_sent = nowHM();
-      persist(); render(); break;
+      persist(); setTimeout(render, 300); break; // let the link open before the card re-renders
     case 'report-send':
-      openWhatsApp(reportText(), settings.supervisorPhone);
+      actEl.href = waLink(reportText(), settings.supervisorPhone);
       day.v.report_sent = nowHM();
-      persist(); render(); break;
+      persist(); setTimeout(render, 300); break;
     case 'report-copy':
-      try { await navigator.clipboard.writeText(reportText()); alert('تم النسخ'); } catch (_) { alert('تعذر النسخ'); }
+      try {
+        await navigator.clipboard.writeText(reportText());
+        flash(actEl, 'تم النسخ ✓');
+      } catch (_) {
+        const pre = $('pre.report');
+        if (pre) getSelection().selectAllChildren(pre);
+        flash(actEl, 'النص محدد — انسخه يدوياً');
+      }
       break;
     case 'reset-day':
-      if (confirm('مسح كل بيانات اليوم والبدء من جديد؟')) { day = newDay(); persist(); render(); }
+      if (armed(actEl, 'اضغط مرة أخرى لمسح اليوم')) { day = newDay(); persist(); render(); }
       break;
     case 'notif':
-      if (!('Notification' in window)) { alert('المتصفح لا يدعم الإشعارات.'); break; }
+      if (!('Notification' in window)) { flash(actEl, 'غير مدعومة في هذا المتصفح'); break; }
       await Notification.requestPermission();
       render();
       if (Notification.permission === 'granted') notify('يوم البائع', 'الإشعارات مفعّلة ✔');
