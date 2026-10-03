@@ -27,7 +27,8 @@
   </header>
 
   <nav class="tabs" role="tablist">
-    <button class="tab active" data-view="day" role="tab">مهام اليوم</button>
+    <button class="tab active" data-view="focus" role="tab">الآن</button>
+    <button class="tab" data-view="day" role="tab">القائمة</button>
     <button class="tab" data-view="history" role="tab">السجل</button>
     <button class="tab" data-view="settings" role="tab">الإعدادات</button>
   </nav>
@@ -36,6 +37,9 @@
 
   <main id="view"></main>
 
+  <div id="celebrate" class="celebrate hidden" aria-live="polite"></div>
+
   <script src="app.js"></script>
+  <script src="focus.js"></script>
 </body>
 </html>

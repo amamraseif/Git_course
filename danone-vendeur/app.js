@@ -16,6 +16,7 @@ const DEFAULT_SETTINGS = {
   currency: 'دج',
   supervisorPhone: '',
   strictOrder: true,
+  offDay: 5, // 0=الأحد … 5=الجمعة، يوم الراحة لا يكسر السلسلة
   minDashboardChecks: 2,
   minPaperRolls: 3,
   maxColdTemp: 6,
@@ -251,12 +252,13 @@ function phaseLocked(idx) {
 }
 
 /* ---------- Rendering ---------- */
-let currentView = 'day';
+let currentView = 'focus';
 
 function render() {
   renderHeader();
   const v = $('#view');
-  if (currentView === 'day') v.innerHTML = renderDay();
+  if (currentView === 'focus') v.innerHTML = renderFocus();
+  else if (currentView === 'day') v.innerHTML = renderDay();
   else if (currentView === 'history') v.innerHTML = renderHistory();
   else v.innerHTML = renderSettings();
 }
@@ -316,6 +318,12 @@ function renderTask(t) {
   </div>`;
 }
 
+// Conditional blocks (warning + reason box) toggled in place, so typing never rebuilds the card.
+const COND = {
+  cold: () => has(day.v.cold) && num(day.v.cold) > settings.maxColdTemp,
+  paper: () => has(day.v.paper) && num(day.v.paper) < settings.minPaperRolls,
+};
+
 const inputNum = (key, val, ph = '') =>
   `<input class="field" type="number" inputmode="decimal" data-v="${key}" value="${esc(val ?? '')}" placeholder="${esc(ph)}">`;
 const noteBox = (id, ph) =>
@@ -331,19 +339,17 @@ function renderTaskBody(t) {
         </div></div>
         ${v === 'nok' ? `<div class="alert bad">لا تنطلق قبل المعالجة. أكمل المستوى أو أبلغ الصيانة.</div>${noteBox(t.id, 'الإجراء المتخذ…')}` : ''}`;
     }
-    case 'cold': {
-      const c = num(day.v.cold);
-      const hot = c !== null && c > settings.maxColdTemp;
+    case 'cold':
       return `<div class="row"><label>الحرارة (°C)</label>${inputNum('cold', day.v.cold, '4')}</div>
-        <div data-out="cold">${hot ? `<div class="alert bad">أعلى من ${settings.maxColdTemp}°C — خطر على المنتجات.</div>` : ''}</div>
-        ${hot ? noteBox('cold', 'الإجراء: تشغيل التبريد، إبلاغ الصيانة…') : ''}`;
-    }
-    case 'paper': {
-      const p = num(day.v.paper);
-      const low = p !== null && p < settings.minPaperRolls;
+        <div data-cond="cold" ${COND.cold() ? '' : 'hidden'}>
+          <div class="alert bad">أعلى من ${settings.maxColdTemp}°C — خطر على المنتجات.</div>
+          ${noteBox('cold', 'الإجراء: تشغيل التبريد، إبلاغ الصيانة…')}
+        </div>`;
+    case 'paper':
       return `<div class="row"><label>عدد اللفات</label>${inputNum('paper', day.v.paper, String(settings.minPaperRolls))}</div>
-        ${low ? `<div class="alert warn">مخزون الورق منخفض.</div>${noteBox('paper', 'ملاحظة…')}` : ''}`;
-    }
+        <div data-cond="paper" ${COND.paper() ? '' : 'hidden'}>
+          <div class="alert warn">مخزون الورق منخفض.</div>${noteBox('paper', 'ملاحظة…')}
+        </div>`;
     case 'clients':
       return `<div class="row"><label>عدد الزبائن المخطط</label>${inputNum('clients_planned', day.v.clients_planned, '0')}</div>
         <div class="row"><label>أولويات اليوم</label></div>
@@ -521,8 +527,15 @@ function summarize(d) {
   const prev = day; day = d; // reuse calculators on an archived day
   const s = stockStartCalc(), r = returnsCalc(), t = targetCalc(), c = cashCalc();
   day = prev;
+  const phasesDone = PHASES.filter((p) => p.tasks.every((x) => !!d.checks[x.id])).length;
+  // Points: 10/task, 20/phase, bonuses for clean numbers and target hit (max 460).
+  const score = done * 10 + phasesDone * 20
+    + (s.filled && s.diffUnits === 0 ? 30 : 0)
+    + (r.filled && r.diffUnits === 0 ? 30 : 0)
+    + (c.diff === 0 ? 30 : 0)
+    + (t.pct !== null && t.pct >= 100 ? 50 : 0);
   return {
-    date: d.date, done, total: ALL_TASKS.length,
+    date: d.date, done, total: ALL_TASKS.length, score,
     targetPct: t.pct, stockDiff: s.filled ? s.diffUnits : null,
     returnDiff: r.filled ? r.diffUnits : null, cashDiff: c.diff,
   };
@@ -677,6 +690,8 @@ function refreshTaskState(t) {
   chk.checked = isDone(t);
   el.classList.toggle('done', isDone(t));
   $('.ready-msg', el).innerHTML = ready === true ? '' : `<div class="alert warn">${esc(ready)}</div>`;
+  const cond = $(`[data-cond="${t.id}"]`, el);
+  if (cond && COND[t.id]) cond.hidden = !COND[t.id]();
   const out = { stock_start: stockStartSummary, target: targetSummary, returns: returnsSummary, cash: cashSummary };
   if (out[t.id]) {
     const o = $(`[data-out="${t.id}"]`, el);
@@ -700,8 +715,6 @@ function refreshStockCells(i) {
   setDiff(`[data-diff="r${i}"]`, theo !== null && has(r.ret) ? num(r.ret) - theo : null);
 }
 
-// Fields whose value changes which extra blocks are shown → full re-render on change.
-const STRUCTURAL = new Set(['cold', 'paper']);
 
 /* ---------- Events ---------- */
 document.addEventListener('input', (e) => {
@@ -729,8 +742,6 @@ document.addEventListener('change', (e) => {
   if (el.dataset.check) {
     day.checks[el.dataset.check] = el.checked;
     persist();
-    render();
-  } else if (el.dataset.v && STRUCTURAL.has(el.dataset.v)) {
     render();
   } else if (el.dataset.stock !== undefined && el.dataset.f === 'name') {
     render();
@@ -834,5 +845,4 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 
-render();
-checkReminders();
+// Boot happens in focus.js (loaded after this file).
