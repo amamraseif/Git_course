@@ -3,43 +3,66 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0b4ea2">
-  <meta name="description" content="قائمة المهام اليومية للبائع بالترتيب مع التذكيرات والحسابات.">
-  <title>يوم البائع</title>
+  <meta name="theme-color" content="#F3F6FB" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#071330" media="(prefers-color-scheme: dark)">
+  <meta name="description" content="تطبيق البائع — مهام البائع اليومية خطوة بخطوة لفريق البيع في دانون جرجرة.">
+  <title>تطبيق البائع</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="يوم البائع">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="تطبيق البائع">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="stylesheet" href="fonts/fonts.css">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="topbar-row">
-      <div>
-        <h1>يوم البائع</h1>
-        <p class="sub" id="who">—</p>
+  <header class="top">
+    <div class="top-row">
+      <button class="avatar tab-link" id="avatar" data-go="settings" aria-label="الإعدادات">ب</button>
+      <div class="who">
+        <div class="who-name" id="who">مرحباً</div>
+        <div class="who-sub" id="whoSub">فريق البيع</div>
       </div>
-      <div class="date" id="today">—</div>
+      <div class="brand">
+        <img class="brand-logo" src="brand/logo.png" alt="" onerror="this.remove()">
+        <span class="brand-name">دانون جرجرة</span>
+      </div>
     </div>
+    <div class="week" id="week"></div>
     <div class="progress" aria-label="نسبة الإنجاز">
       <div class="progress-bar" id="progressBar"></div>
+      <span class="progress-label" id="progressLabel">0/18</span>
     </div>
-    <p class="progress-label" id="progressLabel">0%</p>
   </header>
-
-  <nav class="tabs" role="tablist">
-    <button class="tab active" data-view="focus" role="tab">الآن</button>
-    <button class="tab" data-view="day" role="tab">القائمة</button>
-    <button class="tab" data-view="history" role="tab">السجل</button>
-    <button class="tab" data-view="settings" role="tab">الإعدادات</button>
-  </nav>
 
   <div id="banner" class="banner hidden" role="alert"></div>
 
   <main id="view"></main>
+
+  <nav class="tabbar" role="tablist" aria-label="التنقل">
+    <button class="tab active" data-view="focus" role="tab">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1z"/></svg>
+      <span>الرئيسية</span>
+    </button>
+    <button class="tab" data-view="steps" role="tab">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h10l4 4v12H5zM14 4v5h5" fill="none" stroke-width="2" stroke-linejoin="round"/><path d="M8 13h8M8 17h5" fill="none" stroke-width="2" stroke-linecap="round"/></svg>
+      <span>خطوات البيع</span>
+    </button>
+    <button class="tab" data-view="day" role="tab">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11" fill="none" stroke-width="2.2" stroke-linecap="round"/><circle cx="4.5" cy="6" r="1.6"/><circle cx="4.5" cy="12" r="1.6"/><circle cx="4.5" cy="18" r="1.6"/></svg>
+      <span>القائمة</span>
+    </button>
+    <button class="tab" data-view="history" role="tab">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="12" width="4" height="8" rx="1.2"/><rect x="10" y="7" width="4" height="13" rx="1.2"/><rect x="16" y="4" width="4" height="16" rx="1.2"/></svg>
+      <span>التقدم</span>
+    </button>
+    <button class="tab" data-view="settings" role="tab">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.2-4 4.4-6 8-6s6.8 2 8 6z"/></svg>
+      <span>حسابي</span>
+    </button>
+  </nav>
 
   <div id="celebrate" class="celebrate hidden" aria-live="polite"></div>
 

@@ -1,27 +1,5 @@
-const CACHE = 'tatbiq-al-baee-v2-1';
-const ASSETS = [
-  './',
-  './index.html',
-  './styles.css',
-  './app.js',
-  './focus.js',
-  './manifest.json',
-  './icon.svg',
-  './icon-192.png',
-  './icon-512.png',
-  './apple-touch-icon.png',
-  './fonts/fonts.css',
-  './fonts/Amiri-400-arabic.woff2',
-  './fonts/Amiri-400-latin.woff2',
-  './fonts/Amiri-700-arabic.woff2',
-  './fonts/Amiri-700-latin.woff2',
-  './fonts/IBMPlexSansArabic-400-arabic.woff2',
-  './fonts/IBMPlexSansArabic-400-latin.woff2',
-  './fonts/IBMPlexSansArabic-500-arabic.woff2',
-  './fonts/IBMPlexSansArabic-500-latin.woff2',
-  './fonts/IBMPlexSansArabic-700-arabic.woff2',
-  './fonts/IBMPlexSansArabic-700-latin.woff2',
-];
+const CACHE = 'tatbiq-al-baee-v1-archive';
+const ASSETS = ['./', './index.html', './styles.css', './app.js', './focus.js', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));

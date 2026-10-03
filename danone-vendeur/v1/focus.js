@@ -94,36 +94,17 @@ function greeting() {
 }
 
 /* ---------- Screens ---------- */
-// «أريد أن أصبح…» — هوية البائع لكل مرحلة
-const BECOME = {
-  p1: 'بائعاً لا ينطلق إلا بشاحنة سليمة',
-  p2: 'بائعاً أدواته جاهزة دائماً',
-  p3: 'بائعاً نظامه جاهز قبل أول زبون',
-  p4: 'بائعاً يعرف جولته قبل أن يبدأها',
-  p5: 'بائعاً أرقامه نظيفة من الصباح',
-  p6: 'بائعاً يقيس تقدمه أثناء الجولة',
-  p7: 'بائعاً يُغلق يومه بلا فوارق',
-};
-
-const BOLT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 2 4 14h6.5L9.5 22 20 9.5h-6.6z"/></svg>';
-const LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2.5" fill="none" stroke-width="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" fill="none" stroke-width="2"/></svg>';
-
 function renderFocus() {
   if (!day.introSeen) return renderIntro();
   const t = nextTask();
   return t ? renderFocusTask(t) : renderFinale();
 }
 
-// Streak badge in the card corner; turns from gold to flame after a week.
-function badge(st) {
-  return `<div class="badge ${st.streak >= 7 ? 'hot' : ''}" title="أيام متتالية">${BOLT}<b>${st.streak}</b></div>`;
-}
-
-function statLine(st) {
-  return `<div class="statline">
-    <span><b>${fmt(st.total)}</b> نقطة</span><i></i>
-    <span>${st.level[2]} ${esc(st.level[1])}</span><i></i>
-    <span><b>${st.todayScore}</b> اليوم</span>
+function statChips(st) {
+  return `<div class="chips">
+    <span class="chip fire">🔥 ${st.streak} ${st.streak === 1 ? 'يوم' : 'أيام'}</span>
+    <span class="chip">⭐ ${fmt(st.total)}</span>
+    <span class="chip">${st.level[2]} ${esc(st.level[1])}</span>
   </div>`;
 }
 
@@ -133,36 +114,33 @@ function renderIntro() {
   const [icon, , mins] = HABIT[first.id];
   const y = st.yesterday;
   let streakMsg;
-  if (st.missedLast) streakMsg = '<b>قاعدة اليوم: لا تفوّت مرتين.</b> يوم واحد لا يكسرك، ونعود اليوم.';
-  else if (st.streak > 0) streakMsg = `<b>${st.streak} ${st.streak === 1 ? 'يوم' : 'أيام'}</b> متتالية. لا تكسر السلسلة اليوم.`;
-  else streakMsg = 'اليوم أول يوم في سلسلتك.';
+  if (st.missedLast) streakMsg = '<b>قاعدة اليوم: لا تفوّت مرتين.</b> يوم واحد لا يكسرك — يومان يصنعان عادة جديدة. نعود اليوم.';
+  else if (st.streak > 0) streakMsg = `سلسلتك <b>${st.streak} ${st.streak === 1 ? 'يوم' : 'أيام'}</b> متتالية. لا تكسرها اليوم.`;
+  else streakMsg = 'اليوم أول يوم في سلسلتك. كل بطل بدأ بيوم واحد.';
 
-  return `<section class="stack">
-    <article class="blob intro enter">
-      ${badge(st)}
-      <div class="eyebrow" dir="ltr">${new Date().getHours() < 18 ? 'Bonjour' : 'Bonsoir'} · ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
-      <h2 class="display">${greeting()}</h2>
-      <div class="become">
-        <div class="become-k">أريد أن أصبح</div>
-        <div class="become-v">بائعاً محترفاً يصنع الفرق في كل زيارة</div>
-      </div>
-      <p class="intro-msg">${streakMsg}${y ? ` تحدّي اليوم: تجاوز <b>${fmt(y.score || 0)}</b> نقطة.` : ''}</p>
-      <div class="first-step">
-        <div class="fs-k">الخطوة الأولى · ${mins} ${mins > 2 ? 'دقائق' : 'دقيقة'}</div>
-        <div class="fs-v">${esc(first.title)} ${icon}</div>
-      </div>
-      <button class="cta" data-act="focus-start">ابدأ يومي</button>
-    </article>
-    ${statLine(st)}
+  return `<section class="intro">
+    <div class="intro-sun">${greeting()}</div>
+    ${statChips(st)}
+    <div class="identity">
+      <div class="identity-k">من أنت اليوم؟</div>
+      <div class="identity-v">«أنا بائع محترف: أفحص، أخطط، أبيع، وأُغلق يومي بأرقام نظيفة.»</div>
+    </div>
+    <p class="intro-msg">${streakMsg}</p>
+    ${y ? `<div class="kpis">
+        <div class="kpi"><div class="l">نقاط آخر يوم</div><div class="v">${fmt(y.score || 0)}</div></div>
+        <div class="kpi"><div class="l">هدف آخر يوم</div><div class="v">${y.targetPct === null ? '—' : y.targetPct + '%'}</div></div>
+      </div><p class="intro-msg muted">تحدّي اليوم: تجاوز <b>${fmt(y.score || 0)}</b> نقطة — 1% أفضل يكفي.</p>` : ''}
+    <div class="first-step">
+      <div class="fs-k">الخطوة الأولى — ${mins} ${mins > 2 ? 'دقائق' : 'دقيقة'} فقط</div>
+      <div class="fs-v">${icon} ${esc(first.title)}</div>
+    </div>
+    <button class="big-btn" data-act="focus-start">ابدأ يومي ▶</button>
   </section>`;
 }
 
-function renderPhaseTrack(current) {
-  return `<div class="ptrack" aria-hidden="true">${PHASES.map((p) => {
-    const d = p.tasks.filter(isDone).length;
-    const cls = d === p.tasks.length ? 'full' : p.id === current.phase ? 'now' : '';
-    return `<span class="${cls}" style="--f:${d / p.tasks.length}"></span>`;
-  }).join('')}</div>`;
+function renderDots(current) {
+  return `<div class="dots" aria-hidden="true">${PHASES.map((p) => `<div class="dot-group">${p.tasks.map((t) =>
+    `<span class="dot ${isDone(t) ? 'on' : ''} ${t.id === current.id ? 'now' : ''}"></span>`).join('')}</div>`).join('')}</div>`;
 }
 
 function renderFocusTask(t) {
@@ -172,41 +150,29 @@ function renderFocusTask(t) {
   const idx = ALL_TASKS.indexOf(t);
   const [icon, why, mins] = HABIT[t.id];
   const ready = readiness(t);
-  const upcoming = ALL_TASKS.slice(idx + 1).filter((x) => !isDone(x)).slice(0, 2);
+  const after = ALL_TASKS.slice(idx + 1).find((x) => !isDone(x));
   const hm = new Date().toTimeString().slice(0, 5);
-  const enter = lastCardId !== t.id; // animate only when a new task arrives
+  const enter = lastCardId !== t.id; // animate only when a new task arrives, not on every re-render
   lastCardId = t.id;
   const onRoad = t.phase === 'p6' && day.dashLog.length === 0 && settings.reminders.p6 && hm < settings.reminders.p6;
 
-  return `<section class="stack">
-    ${renderPhaseTrack(t)}
-    ${onRoad ? `<div class="road">أنت الآن في الجولة 🚚 سأذكّرك الساعة <b>${esc(settings.reminders.p6)}</b> لمتابعة لوحة التحكم.</div>` : ''}
-    <article class="blob task ${enter ? 'enter' : ''}" id="task-${t.id}">
-      ${badge(st)}
-      <button class="pill-btn" data-act="go-list" aria-label="كل المهام">•••</button>
-      <div class="phase-chip">المرحلة ${pIdx + 1} · ${esc(p.title)} <span dir="ltr">${esc(p.fr)}</span></div>
-      <h2 class="display task-title">${esc(t.title)} <span class="t-icon">${icon}</span></h2>
-      <div class="fr" dir="ltr">${esc(t.fr)}</div>
-      <div class="become">
-        <div class="become-k">أريد أن أصبح</div>
-        <div class="become-v">${esc(BECOME[p.id])}</div>
-      </div>
-      <p class="hint">${esc(t.hint)}</p>
-      <p class="why">${esc(why)}</p>
+  return `<section class="focus">
+    ${statChips(st)}
+    ${renderDots(t)}
+    ${onRoad ? `<div class="road">🚚 أنت الآن في الجولة — بالتوفيق!<br>سأذكّرك الساعة <b>${esc(settings.reminders.p6)}</b> لمتابعة لوحة التحكم.</div>` : ''}
+    <article class="f-card task ${enter ? 'enter' : ''}" id="task-${t.id}">
+      <div class="f-phase">المرحلة ${pIdx + 1}/${PHASES.length} · ${esc(p.title)}</div>
+      <div class="f-icon">${icon}</div>
+      <div class="f-step">الخطوة ${idx + 1} من ${ALL_TASKS.length} · ⏱ ${mins} د</div>
+      <h2 class="f-title">${esc(t.title)}</h2>
+      <p class="f-hint">${esc(t.hint)}</p>
+      <p class="f-why">💡 ${esc(why)}</p>
       <div class="f-body">${renderTaskBody(t)}</div>
       <div class="ready-msg">${ready === true ? '' : `<div class="alert warn">${esc(ready)}</div>`}</div>
-      <button class="cta done-btn" id="chk-${t.id}" data-act="focus-done" data-id="${t.id}" ${ready === true ? '' : 'disabled'}>
-        <span class="tick">✓</span> تم
-      </button>
-      <div class="meta">الخطوة ${idx + 1} من ${ALL_TASKS.length} · ${mins} د</div>
+      <button class="big-btn done-btn" id="chk-${t.id}" data-act="focus-done" data-id="${t.id}" ${ready === true ? '' : 'disabled'}>تم ✓</button>
     </article>
-    ${upcoming.map((u, k) => `
-      <article class="blob locked l${k + 1}" aria-label="مهمة قادمة">
-        <span class="pill-btn lock">${LOCK}</span>
-        <h3 class="display">${esc(u.title)} <span class="t-icon">${HABIT[u.id][0]}</span></h3>
-        <div class="fr" dir="ltr">${esc(u.fr)}</div>
-      </article>`).join('')}
-    ${statLine(st)}
+    ${after ? `<div class="after">بعدها مباشرة: ${HABIT[after.id][0]} ${esc(after.title)}</div>` : ''}
+    <button class="link-btn" data-act="go-list">عرض كل المهام</button>
   </section>`;
 }
 
@@ -216,25 +182,18 @@ function renderFinale() {
   const delta = y ? st.todayScore - (y.score || 0) : null;
   const toNext = st.nextLevel ? st.nextLevel[0] - st.total : 0;
   const firstRem = settings.reminders.p1;
-  return `<section class="stack">
-    <article class="blob intro finale enter">
-      ${badge(st)}
-      <div class="trophy">🏆</div>
-      <div class="eyebrow" dir="ltr">Journée clôturée</div>
-      <h2 class="display">يوم مكتمل</h2>
-      <div class="kpis">
-        <div class="kpi"><div class="l">نقاط اليوم</div><div class="v ok">${fmt(st.todayScore)}</div></div>
-        <div class="kpi"><div class="l">مقارنة بآخر يوم</div><div class="v ${delta === null ? '' : delta >= 0 ? 'ok' : 'bad'}">${delta === null ? '—' : signed(delta)}</div></div>
-      </div>
-      ${st.nextLevel ? `<p class="intro-msg">باقي <b>${fmt(toNext)}</b> نقطة للوصول إلى ${st.nextLevel[2]} <b>${esc(st.nextLevel[1])}</b>.</p>` : ''}
-      <div class="become">
-        <div class="become-k">اليوم صوّتَّ لصالح</div>
-        <div class="become-v">البائع الذي تريد أن تكونه</div>
-      </div>
-      <p class="intro-msg muted">نلتقي غداً${firstRem ? ' على الساعة ' + esc(firstRem) : ''}.</p>
-      <button class="pill-link" data-act="go-list">مراجعة اليوم</button>
-    </article>
-    ${statLine(st)}
+  return `<section class="intro finale">
+    <div class="trophy">🏆</div>
+    <div class="intro-sun">يوم مكتمل!</div>
+    ${statChips(st)}
+    <div class="kpis">
+      <div class="kpi"><div class="l">نقاط اليوم</div><div class="v ok">${fmt(st.todayScore)}</div></div>
+      <div class="kpi"><div class="l">مقارنة بآخر يوم</div><div class="v ${delta === null ? '' : delta >= 0 ? 'ok' : 'bad'}">${delta === null ? '—' : signed(delta)}</div></div>
+    </div>
+    ${st.nextLevel ? `<p class="intro-msg">باقي <b>${fmt(toNext)}</b> نقطة للوصول إلى ${st.nextLevel[2]} <b>${esc(st.nextLevel[1])}</b>.</p>` : ''}
+    <div class="identity"><div class="identity-v">«لم تُنجز مهاماً فقط — صوّتَّ اليوم لصالح البائع الذي تريد أن تكونه.»</div></div>
+    <p class="intro-msg muted">نلتقي غداً${firstRem ? ' ⏰ ' + esc(firstRem) : ''}. ارتح جيداً.</p>
+    <button class="link-btn" data-act="go-list">مراجعة اليوم</button>
   </section>`;
 }
 
@@ -245,7 +204,7 @@ function celebrate(t, phaseFinished) {
   const p = phaseOf(t);
   const pts = 10 + (phaseFinished ? 20 : 0);
   const el = $('#celebrate');
-  const colors = ['#0047BA', '#E4002B', '#FFFFFF', '#F2B33D', '#6FA8FF'];
+  const colors = ['#0b4ea2', '#e30613', '#f5b301', '#1f9d55', '#3d82e0'];
   const n = phaseFinished ? 40 : 18;
   let confetti = '';
   for (let i = 0; i < n; i++) {
@@ -275,8 +234,6 @@ function endCelebration() {
 /* ---------- Events ---------- */
 document.addEventListener('click', (e) => {
   if (e.target.closest('#celebrate')) { endCelebration(); return; }
-  const go = e.target.closest('[data-go]');
-  if (go) { switchView(go.dataset.go); return; }
   const btn = e.target.closest('[data-act]');
   if (!btn) return;
   switch (btn.dataset.act) {
@@ -302,7 +259,6 @@ document.addEventListener('click', (e) => {
 
 function switchView(v) {
   currentView = v;
-  window.scrollTo({ top: 0 });
   document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.view === v));
   render();
   checkReminders();

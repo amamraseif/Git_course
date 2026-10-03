@@ -1,7 +1,7 @@
 'use strict';
 
 /* ============================================================
-   تطبيق البائع V2 — دانون جرجرة: مهام البائع اليومية (تطبيق ويب يعمل دون إنترنت)
+   يوم البائع — قائمة المهام اليومية للبائع (تطبيق ويب يعمل دون إنترنت)
    البيانات محفوظة محلياً على الهاتف (localStorage).
    ============================================================ */
 
@@ -24,17 +24,16 @@ const DEFAULT_SETTINGS = {
   reminders: { p1: '06:30', p2: '06:45', p3: '06:55', p4: '07:00', p5: '07:10', p6: '12:30', p7: '16:30' },
 };
 
-// خطوات الزيارة الناجحة — بالمصطلحات المستعملة في الميدان
 const SALES_STEPS = [
-  { icon: '📋', ar: 'التحضير', fr: 'Préparation', tip: 'راجع تاريخ الزبون: آخر طلبية، الديون، المنتجات الغائبة عنده.' },
-  { icon: '🤝', ar: 'التحية وبناء العلاقة', fr: 'Salutation', tip: 'ابتسامة، سؤال عن النشاط، واستماع لملاحظات الزبون.' },
-  { icon: '🧊', ar: 'فحص نقطة البيع', fr: 'Contrôle frigo · DLC · FIFO', tip: 'الثلاجة والرف، تواريخ الصلاحية، الأقدم أولاً، سحب التالف.' },
-  { icon: '🔢', ar: 'جرد مخزون الزبون', fr: 'Inventaire client', tip: 'عُدّ ما تبقى من كل منتج لتعرف الكمية المناسبة.' },
-  { icon: '🛒', ar: 'اقتراح الطلبية', fr: 'Proposition de commande', tip: 'كمية مبنية على المبيعات + المنتجات الجديدة والعروض.' },
-  { icon: '💬', ar: 'معالجة الاعتراضات', fr: 'Traitement des objections', tip: 'السعر، المساحة، الدوران: أجب بالأرقام وبفائدة الزبون.' },
-  { icon: '✨', ar: 'التنفيذ في المحل', fr: 'Merchandising · Mise en avant', tip: 'ترتيب الثلاجة والرف، مواد الترويج (PLV)، واجهة المنتجات.' },
-  { icon: '🧾', ar: 'الفاتورة والتحصيل', fr: 'Facturation · Encaissement', tip: 'فاتورة من التطبيق، طباعتها، التحصيل، وتسجيل الدين إن وُجد.' },
-  { icon: '👋', ar: 'ختام الزيارة', fr: 'Clôture de visite', tip: 'موعد الزيارة القادمة، وسجّل أي معلومة سوقية.' },
+  ['التحضير', 'راجع تاريخ الزبون: آخر طلبية، الديون، المنتجات المفقودة عنده.'],
+  ['التحية وبناء العلاقة', 'تحية، سؤال عن النشاط، استماع لملاحظات الزبون.'],
+  ['فحص نقطة البيع', 'الثلاجة، الرف، تواريخ الصلاحية، دوران المخزون (الأقدم أولاً FIFO)، سحب التالف.'],
+  ['جرد مخزون الزبون', 'عدّ ما تبقى من كل منتج لتحديد الكمية المناسبة.'],
+  ['اقتراح الطلبية', 'اقترح كمية مبنية على المبيعات + المنتجات الجديدة والعروض.'],
+  ['معالجة الاعتراضات', 'السعر، المساحة، الدوران: أجب بالأرقام والفائدة للزبون.'],
+  ['التنفيذ في المحل', 'ترتيب الرف والثلاجة، وضع مواد الترويج، واجهة المنتجات.'],
+  ['الفاتورة والتحصيل', 'إصدار الفاتورة من التطبيق، طباعتها، التحصيل، تسجيل الدين إن وجد.'],
+  ['الختام', 'تأكيد موعد الزيارة القادمة وتسجيل أي معلومة سوقية.'],
 ];
 
 /* ---------- Phases & tasks (order = execution order) ---------- */
@@ -63,7 +62,7 @@ const PHASES = [
   {
     id: 'p4', title: 'تخطيط اليوم', tasks: [
       { id: 'clients', kind: 'clients', title: 'مراجعة زبائن اليوم الواجب زيارتهم', hint: 'الجولة في التطبيق: الترتيب، الزبائن ذوو الأولوية، الديون المستحقة.' },
-      { id: 'steps', kind: 'steps', title: 'مراجعة خطوات البيع', hint: 'مرّر البطاقات حتى آخر خطوة قبل أول زيارة.' },
+      { id: 'steps', kind: 'steps', title: 'مراجعة خطوات البيع', hint: 'اقرأ الخطوات قبل أول زيارة.' },
     ],
   },
   {
@@ -86,19 +85,6 @@ const PHASES = [
     ],
   },
 ];
-
-// المصطلح الفرنسي المألوف في الميدان لكل مرحلة ومهمة
-const FR = {
-  p1: 'Contrôle camion', p2: 'Outils de travail', p3: 'Application de vente', p4: 'Préparation tournée',
-  p5: 'Chargement', p6: 'En tournée', p7: 'Clôture de journée',
-  truck_walk: 'Tour du camion', oil: "Niveau d'huile", water: 'Liquide de refroidissement', cold: 'Température caisson',
-  phone: 'Smartphone', printer: 'Imprimante mobile', paper: 'Rouleaux papier',
-  app_open: 'Connexion', app_session: 'Ouverture journée · Synchro',
-  clients: 'Clients du jour · Tournée', steps: 'Étapes de la visite',
-  stock_start: 'Inventaire camion · Chargement', dashboard: 'Suivi tableau de bord', market: 'Remontée terrain',
-  target: 'Objectif du jour', returns: 'Inventaire retour', cash: 'Versement · Recette', report: 'Rapport journalier',
-};
-PHASES.forEach((p) => { p.fr = FR[p.id]; p.tasks.forEach((t) => { t.fr = FR[t.id]; }); });
 
 const ALL_TASKS = PHASES.flatMap((p) => p.tasks.map((t) => ({ ...t, phase: p.id })));
 
@@ -195,8 +181,6 @@ function readiness(t) {
       return has(day.v.clients_planned) && num(day.v.clients_planned) > 0 ? true : 'أدخل عدد زبائن اليوم.';
     case 'match':
       return day.v[t.id] ? true : 'اختر: مطابق أو غير مطابق.';
-    case 'steps':
-      return day.v.steps_seen ? true : 'مرّر البطاقات حتى الخطوة الأخيرة.';
     case 'dashboard':
       return day.dashLog.length >= settings.minDashboardChecks
         ? true : `سجّل ${settings.minDashboardChecks} نقاط متابعة على الأقل (${day.dashLog.length} حالياً).`;
@@ -237,38 +221,16 @@ function render() {
   if (currentView === 'focus') v.innerHTML = renderFocus();
   else if (currentView === 'day') v.innerHTML = renderDay();
   else if (currentView === 'history') v.innerHTML = renderHistory();
-  else if (currentView === 'steps') v.innerHTML = renderStepsGuide();
   else v.innerHTML = renderSettings();
 }
-
-const DAY_SHORT = ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
 
 function renderHeader() {
   const done = ALL_TASKS.filter(isDone).length;
   const pct = Math.round((done / ALL_TASKS.length) * 100);
   $('#progressBar').style.width = pct + '%';
-  $('#progressLabel').textContent = `${done}/${ALL_TASKS.length}`;
-  const first = (settings.name || '').trim();
-  $('#avatar').textContent = first ? first[0] : 'ب';
-  $('#who').textContent = first ? `مرحبا، ${first}` : 'مرحبا بك';
-  $('#whoSub').textContent = [settings.code, settings.route].filter(Boolean).join(' · ') || 'فريق البيع';
-
-  // Week strip: last 7 days, completed days marked from history.
-  const h = load(KEY_HIST, {});
-  const cells = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const k = d.toLocaleDateString('en-CA');
-    const off = d.getDay() === Number(settings.offDay);
-    const rec = i === 0 ? { done, total: ALL_TASKS.length } : h[k];
-    const state = off ? 'off' : rec && rec.done === rec.total ? 'full' : rec && rec.done > 0 ? 'part' : 'none';
-    cells.push(`<div class="wd ${i === 0 ? 'today' : ''} ${state}">
-      <span class="wd-n">${i === 0 ? 'اليوم' : DAY_SHORT[d.getDay()]}</span>
-      <span class="wd-d">${d.getDate()}</span>
-    </div>`);
-  }
-  $('#week').innerHTML = cells.join('');
+  $('#progressLabel').textContent = `${done} / ${ALL_TASKS.length} مهمة — \u2066${pct}%\u2069`;
+  $('#who').textContent = [settings.name || 'البائع', settings.code, settings.route].filter(Boolean).join(' · ');
+  $('#today').textContent = new Date().toLocaleDateString('ar-DZ', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
 function renderDay() {
@@ -354,7 +316,7 @@ function renderTaskBody(t) {
         <div class="row"><label>أولويات اليوم</label></div>
         <textarea class="field" data-v="clients_notes" placeholder="زبائن جدد، ديون للتحصيل، طلبيات خاصة…">${esc(day.v.clients_notes || '')}</textarea>`;
     case 'steps':
-      return renderStepsCarousel();
+      return `<ol class="steps">${SALES_STEPS.map(([a, b]) => `<li><b>${esc(a)}:</b> ${esc(b)}</li>`).join('')}</ol>`;
     case 'match': {
       const v = day.v[t.id];
       return `<div class="row"><div class="seg">
@@ -532,68 +494,11 @@ function renderHistory() {
 }
 
 /* ---------- Settings ---------- */
-/* ---------- Sales steps carousel (swipe) ---------- */
-function renderStepsCarousel(big = false) {
-  const n = SALES_STEPS.length;
-  return `<div class="steps-wrap ${big ? 'big' : ''}">
-    <div class="steps-track" data-steps>${SALES_STEPS.map((x, i) => `
-      <article class="step-card" data-i="${i}">
-        <div class="step-num">${i + 1}<span>/${n}</span></div>
-        <div class="step-icon">${x.icon}</div>
-        <h3 class="step-ar">${esc(x.ar)}</h3>
-        <div class="step-fr" dir="ltr">${esc(x.fr)}</div>
-        <p class="step-tip">${esc(x.tip)}</p>
-      </article>`).join('')}
-    </div>
-    <div class="step-nav">
-      <button class="step-arrow" data-act="step-prev" aria-label="السابق">→</button>
-      <div class="step-dots">${SALES_STEPS.map((_, i) => `<i class="${i === 0 ? 'on' : ''}"></i>`).join('')}</div>
-      <button class="step-arrow" data-act="step-next" aria-label="التالي">←</button>
-    </div>
-  </div>`;
-}
-
-function stepIndex(track) {
-  const c = track.children[0];
-  const w = c ? c.getBoundingClientRect().width + parseFloat(getComputedStyle(track).columnGap || 0) : 1;
-  return Math.round(Math.abs(track.scrollLeft) / (w || 1)); // RTL scrollLeft is ≤ 0
-}
-
-function onStepsScroll(track) {
-  const i = stepIndex(track);
-  track.parentElement.querySelectorAll('.step-dots i').forEach((d, k) => d.classList.toggle('on', k === i));
-  if (i === SALES_STEPS.length - 1 && !day.v.steps_seen) {
-    day.v.steps_seen = '1';
-    persist();
-    const t = ALL_TASKS.find((x) => x.id === 'steps');
-    if ($('#task-steps')) refreshTaskState(t);
-  }
-}
-
-document.addEventListener('scroll', (e) => {
-  const tr = e.target;
-  if (tr.matches && tr.matches('[data-steps]')) onStepsScroll(tr);
-}, true);
-
-function renderStepsGuide() {
-  return `<section class="guide">
-    <div class="guide-head">
-      <div class="eyebrow" dir="ltr">Les étapes de la visite</div>
-      <h2 class="display">خطوات الزيارة الناجحة</h2>
-      <p class="muted">نفس الخطوات، في كل زيارة، عند كل زبون. هكذا تُبنى النتائج.</p>
-    </div>
-    ${renderStepsCarousel(true)}
-  </section>`;
-}
-
 function renderSettings() {
   const txt = (k, l, type = 'text', ph = '') =>
     `<div class="row"><label>${l}</label><input class="field" type="${type}" data-s="${k}" value="${esc(settings[k])}" placeholder="${esc(ph)}"></div>`;
   const perm = 'Notification' in window ? Notification.permission : 'unsupported';
-  return `<div class="card version"><h2>تطبيق البائع <span class="ver">V2</span></h2>
-      <p class="muted">النسخة السابقة محفوظة ويمكن الرجوع إليها في أي وقت: <a href="v1/">تطبيق البائع v1</a> (بياناتك مشتركة بين النسختين).</p>
-    </div>
-    <div class="card"><h2>البائع</h2>
+  return `<div class="card"><h2>البائع</h2>
       ${txt('name', 'الاسم')}
       ${txt('code', 'رمز البائع')}
       ${txt('route', 'الجولة / القطاع')}
@@ -767,7 +672,6 @@ document.addEventListener('click', async (e) => {
     currentView = tab.dataset.view;
     render();
     checkReminders();
-    window.scrollTo({ top: 0 });
     return;
   }
   if (e.target.closest('#banner')) {
@@ -788,14 +692,6 @@ document.addEventListener('click', async (e) => {
   const act = actEl?.dataset.act;
   if (!act) return;
   switch (act) {
-    case 'step-next':
-    case 'step-prev': {
-      const track = actEl.closest('.steps-wrap').querySelector('[data-steps]');
-      const i = stepIndex(track) + (act === 'step-next' ? 1 : -1);
-      const card = track.children[Math.max(0, Math.min(SALES_STEPS.length - 1, i))];
-      card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-      break;
-    }
     case 'dash-log':
       day.dashLog.push({ time: nowHM(), visits: day.v.dash_visits || '', sales: day.v.dash_sales || '' });
       persist(); render(); break;
