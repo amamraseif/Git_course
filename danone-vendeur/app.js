@@ -19,8 +19,8 @@ const DEFAULT_SETTINGS = {
   offDay: 5, // 0=الأحد … 5=الجمعة، يوم الراحة لا يكسر السلسلة
   minDashboardChecks: 2,
   minPaperRolls: 3,
+  minColdTemp: 2,
   maxColdTemp: 6,
-  skus: ['ياغورت طبيعي', 'ياغورت بالفواكه', 'ياغورت للشرب', 'دانيت', 'أكتيفيا', 'جبن طري'],
   reminders: { p1: '06:30', p2: '06:45', p3: '06:55', p4: '07:00', p5: '07:10', p6: '12:30', p7: '16:30' },
 };
 
@@ -43,7 +43,7 @@ const PHASES = [
       { id: 'truck_walk', kind: 'simple', title: 'جولة حول الشاحنة', hint: 'الإطارات، الأضواء، المرايا، الأبواب، نظافة الصندوق، الوثائق.' },
       { id: 'oil', kind: 'oknok', title: 'التحقق من مستوى زيت المحرك', hint: 'المستوى بين علامتي MIN و MAX على العصا.' },
       { id: 'water', kind: 'oknok', title: 'التحقق من مستوى ماء التبريد', hint: 'المحرك بارد — المستوى في الخزان الاحتياطي بين MIN و MAX.' },
-      { id: 'cold', kind: 'cold', title: 'حرارة صندوق التبريد', hint: 'سلسلة التبريد: منتجات الألبان بين 0 و 6 درجات.' },
+      { id: 'cold', kind: 'cold', title: 'حرارة صندوق التبريد', hint: 'سلسلة التبريد: الحرارة الصحيحة بين 2 و 6 درجات.' },
     ],
   },
   {
@@ -67,7 +67,7 @@ const PHASES = [
   },
   {
     id: 'p5', title: 'مطابقة مخزون الانطلاق', tasks: [
-      { id: 'stock_start', kind: 'stockStart', title: 'مخزون التطبيق = المخزون الفعلي في الشاحنة', hint: 'عُدّ كل منتج في الشاحنة وقارنه بمخزون التطبيق قبل الانطلاق.' },
+      { id: 'stock_start', kind: 'match', title: 'مطابقة مخزون الشاحنة مع التطبيق', hint: 'قارن المخزون الفعلي في الشاحنة بمخزون التطبيق قبل الانطلاق.' },
     ],
   },
   {
@@ -79,7 +79,7 @@ const PHASES = [
   {
     id: 'p7', title: 'إغلاق اليوم', tasks: [
       { id: 'target', kind: 'target', title: 'التحقق من تحقيق الهدف اليومي', hint: 'قارن المحقق بالهدف من لوحة التحكم.' },
-      { id: 'returns', kind: 'returns', title: 'حساب مخزون الرجوع', hint: 'الرجوع النظري = المشحون − المباع. عُدّ الرجوع الفعلي وقارن.' },
+      { id: 'returns', kind: 'match', title: 'مطابقة مخزون الرجوع مع التطبيق', hint: 'عند رجوع الشاحنة: قارن المخزون المتبقي بمخزون التطبيق.' },
       { id: 'cash', kind: 'cash', title: 'حساب المداخيل والتحقق من رقم التطبيق', hint: 'عُدّ النقود والشيكات وقارنها بمبلغ التحصيل في التطبيق.' },
       { id: 'report', kind: 'report', title: 'إرسال التقرير اليومي للمشرف', hint: 'ملخص اليوم جاهز للإرسال عبر واتساب.' },
     ],
@@ -111,7 +111,6 @@ function newDay() {
     date: todayKey(),
     checks: {},
     v: {},
-    stock: settings.skus.map((name) => ({ name, app: '', phys: '', sold: '', ret: '' })),
     dashLog: [],
     notified: {},
     startedAt: null,
@@ -142,35 +141,7 @@ const nowHM = () => new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', mi
 const note = (id) => (day.v[id + '_note'] || '').trim();
 
 /* ---------- Calculations ---------- */
-function stockStartCalc() {
-  const rows = day.stock.filter((r) => r.name.trim());
-  const filled = rows.length > 0 && rows.every((r) => has(r.app) && has(r.phys));
-  let diffUnits = 0, appTotal = 0, physTotal = 0;
-  rows.forEach((r) => {
-    if (has(r.app) && has(r.phys)) {
-      diffUnits += Math.abs(num(r.phys) - num(r.app));
-      appTotal += num(r.app);
-      physTotal += num(r.phys);
-    }
-  });
-  return { rows, filled, diffUnits, appTotal, physTotal };
-}
 
-function returnsCalc() {
-  const rows = day.stock.filter((r) => r.name.trim());
-  const filled = rows.length > 0 && rows.every((r) => has(r.phys) && has(r.sold) && has(r.ret));
-  let theo = 0, real = 0, diffUnits = 0, sold = 0;
-  rows.forEach((r) => {
-    if (has(r.phys) && has(r.sold) && has(r.ret)) {
-      const t = num(r.phys) - num(r.sold);
-      theo += t;
-      real += num(r.ret);
-      sold += num(r.sold);
-      diffUnits += Math.abs(num(r.ret) - t);
-    }
-  });
-  return { rows, filled, theo, real, sold, diffUnits };
-}
 
 function targetCalc() {
   const t = num(day.v.target_goal), a = num(day.v.target_done);
@@ -197,7 +168,7 @@ function readiness(t) {
     case 'cold': {
       const c = num(day.v.cold);
       if (c === null) return 'أدخل الحرارة.';
-      if (c > settings.maxColdTemp && !note('cold')) return 'الحرارة مرتفعة: اكتب الإجراء المتخذ.';
+      if (COND.cold() && !note('cold')) return 'الحرارة خارج المجال (2–6°C): اكتب الإجراء المتخذ.';
       return true;
     }
     case 'paper': {
@@ -208,12 +179,8 @@ function readiness(t) {
     }
     case 'clients':
       return has(day.v.clients_planned) && num(day.v.clients_planned) > 0 ? true : 'أدخل عدد زبائن اليوم.';
-    case 'stockStart': {
-      const c = stockStartCalc();
-      if (!c.filled) return 'أدخل الكميتين لكل منتج.';
-      if (c.diffUnits > 0 && !note('stock_start')) return 'يوجد فارق: اكتب السبب وأبلغ المسؤول قبل الانطلاق.';
-      return true;
-    }
+    case 'match':
+      return day.v[t.id] ? true : 'اختر: مطابق أو غير مطابق.';
     case 'dashboard':
       return day.dashLog.length >= settings.minDashboardChecks
         ? true : `سجّل ${settings.minDashboardChecks} نقاط متابعة على الأقل (${day.dashLog.length} حالياً).`;
@@ -223,12 +190,6 @@ function readiness(t) {
       const c = targetCalc();
       if (c.pct === null) return 'أدخل الهدف والمحقق.';
       if (c.pct < 100 && !note('target')) return 'الهدف غير محقق: اكتب الأسباب.';
-      return true;
-    }
-    case 'returns': {
-      const c = returnsCalc();
-      if (!c.filled) return 'أدخل المباع والرجوع الفعلي لكل منتج (المشحون من مرحلة الانطلاق).';
-      if (c.diffUnits > 0 && !note('returns')) return 'يوجد فارق في الرجوع: اكتب السبب.';
       return true;
     }
     case 'cash': {
@@ -320,7 +281,7 @@ function renderTask(t) {
 
 // Conditional blocks (warning + reason box) toggled in place, so typing never rebuilds the card.
 const COND = {
-  cold: () => has(day.v.cold) && num(day.v.cold) > settings.maxColdTemp,
+  cold: () => has(day.v.cold) && (num(day.v.cold) < settings.minColdTemp || num(day.v.cold) > settings.maxColdTemp),
   paper: () => has(day.v.paper) && num(day.v.paper) < settings.minPaperRolls,
 };
 
@@ -342,7 +303,7 @@ function renderTaskBody(t) {
     case 'cold':
       return `<div class="row"><label>الحرارة (°C)</label>${inputNum('cold', day.v.cold, '4')}</div>
         <div data-cond="cold" ${COND.cold() ? '' : 'hidden'}>
-          <div class="alert bad">أعلى من ${settings.maxColdTemp}°C — خطر على المنتجات.</div>
+          <div class="alert bad">خارج المجال ${settings.minColdTemp}–${settings.maxColdTemp}°C — خطر على المنتجات (تجمّد أو فساد).</div>
           ${noteBox('cold', 'الإجراء: تشغيل التبريد، إبلاغ الصيانة…')}
         </div>`;
     case 'paper':
@@ -356,44 +317,23 @@ function renderTaskBody(t) {
         <textarea class="field" data-v="clients_notes" placeholder="زبائن جدد، ديون للتحصيل، طلبيات خاصة…">${esc(day.v.clients_notes || '')}</textarea>`;
     case 'steps':
       return `<ol class="steps">${SALES_STEPS.map(([a, b]) => `<li><b>${esc(a)}:</b> ${esc(b)}</li>`).join('')}</ol>`;
-    case 'stockStart': return renderStockStart();
+    case 'match': {
+      const v = day.v[t.id];
+      return `<div class="row"><div class="seg">
+          <button data-set="${t.id}" data-val="ok" class="${v === 'ok' ? 'on-ok' : ''}">✔ مطابق</button>
+          <button data-set="${t.id}" data-val="nok" class="${v === 'nok' ? 'on-bad' : ''}">✖ غير مطابق</button>
+        </div></div>
+        ${v === 'nok' ? `<div class="alert bad">أبلغ المسؤول قبل ${t.id === 'stock_start' ? 'الانطلاق' : 'المغادرة'}.</div>${noteBox(t.id, 'ملاحظة اختيارية…')}` : ''}`;
+    }
     case 'dashboard': return renderDashboard();
     case 'market': return renderMarket();
     case 'target': return renderTarget();
-    case 'returns': return renderReturns();
     case 'cash': return renderCash();
     case 'report': return renderReport();
     default: return '';
   }
 }
 
-function renderStockStart() {
-  const rows = day.stock.map((r, i) => {
-    const d = has(r.app) && has(r.phys) ? num(r.phys) - num(r.app) : null;
-    return `<tr>
-      <td><input class="field" type="text" data-stock="${i}" data-f="name" value="${esc(r.name)}"></td>
-      <td><input class="field" type="number" inputmode="numeric" data-stock="${i}" data-f="app" value="${esc(r.app)}"></td>
-      <td><input class="field" type="number" inputmode="numeric" data-stock="${i}" data-f="phys" value="${esc(r.phys)}"></td>
-      <td class="diff ${d === null ? '' : d === 0 ? 'ok' : 'bad'}" data-diff="s${i}">${signed(d)}</td>
-      <td><button class="btn ghost sm" data-act="del-sku" data-i="${i}" aria-label="حذف">✕</button></td>
-    </tr>`;
-  }).join('');
-  return `<div class="table-wrap"><table>
-      <thead><tr><th>المنتج</th><th>التطبيق</th><th>الفعلي</th><th>الفارق</th><th></th></tr></thead>
-      <tbody>${rows}</tbody></table></div>
-    <button class="btn ghost sm" data-act="add-sku">+ منتج</button>
-    <div data-out="stock_start">${stockStartSummary()}</div>
-    ${noteBox('stock_start', 'سبب الفارق / اسم المسؤول المُبلَّغ…')}`;
-}
-function stockStartSummary() {
-  const c = stockStartCalc();
-  if (!c.filled) return '';
-  return `<div class="kpis">
-      <div class="kpi"><div class="l">إجمالي التطبيق</div><div class="v">${fmt(c.appTotal)}</div></div>
-      <div class="kpi"><div class="l">إجمالي الفعلي</div><div class="v">${fmt(c.physTotal)}</div></div>
-      <div class="kpi"><div class="l">وحدات بفارق</div><div class="v ${c.diffUnits ? 'bad' : 'ok'}">${fmt(c.diffUnits)}</div></div>
-    </div>${c.diffUnits ? '<div class="alert bad">المخزون غير مطابق — صحّح قبل الانطلاق.</div>' : '<div class="alert ok">المخزون مطابق ✔</div>'}`;
-}
 
 function renderDashboard() {
   const log = day.dashLog.map((e) =>
@@ -443,36 +383,6 @@ function targetSummary() {
     </div>`;
 }
 
-function renderReturns() {
-  const rows = day.stock.filter((r) => r.name.trim()).map((r) => {
-    const i = day.stock.indexOf(r);
-    const theo = has(r.phys) && has(r.sold) ? num(r.phys) - num(r.sold) : null;
-    const d = theo !== null && has(r.ret) ? num(r.ret) - theo : null;
-    return `<tr>
-      <td>${esc(r.name)}</td>
-      <td>${fmt(num(r.phys))}</td>
-      <td><input class="field" type="number" inputmode="numeric" data-stock="${i}" data-f="sold" value="${esc(r.sold)}"></td>
-      <td data-theo="${i}">${fmt(theo)}</td>
-      <td><input class="field" type="number" inputmode="numeric" data-stock="${i}" data-f="ret" value="${esc(r.ret)}"></td>
-      <td class="diff ${d === null ? '' : d === 0 ? 'ok' : 'bad'}" data-diff="r${i}">${signed(d)}</td>
-    </tr>`;
-  }).join('');
-  return `<div class="table-wrap"><table>
-      <thead><tr><th>المنتج</th><th>المشحون</th><th>المباع</th><th>الرجوع النظري</th><th>الرجوع الفعلي</th><th>الفارق</th></tr></thead>
-      <tbody>${rows}</tbody></table></div>
-    <div data-out="returns">${returnsSummary()}</div>
-    ${noteBox('returns', 'سبب الفارق: تالف، خطأ فوترة، هدايا…')}`;
-}
-function returnsSummary() {
-  const c = returnsCalc();
-  if (!c.filled) return '';
-  return `<div class="kpis">
-      <div class="kpi"><div class="l">المباع</div><div class="v">${fmt(c.sold)}</div></div>
-      <div class="kpi"><div class="l">الرجوع النظري</div><div class="v">${fmt(c.theo)}</div></div>
-      <div class="kpi"><div class="l">الرجوع الفعلي</div><div class="v">${fmt(c.real)}</div></div>
-      <div class="kpi"><div class="l">وحدات بفارق</div><div class="v ${c.diffUnits ? 'bad' : 'ok'}">${fmt(c.diffUnits)}</div></div>
-    </div>`;
-}
 
 function renderCash() {
   return `<div class="row"><label>النقود المعدودة</label>${inputNum('cash_cash', day.v.cash_cash)}</div>
@@ -492,8 +402,10 @@ function cashSummary() {
     </div>${c.diff === 0 ? '<div class="alert ok">المداخيل مطابقة ✔</div>' : `<div class="alert bad">${c.diff < 0 ? 'عجز' : 'فائض'} في الصندوق.</div>`}`;
 }
 
+const matchLabel = (v) => (v === 'ok' ? 'مطابق ✔' : v === 'nok' ? 'غير مطابق ✖' : '—');
+
 function reportText() {
-  const s = stockStartCalc(), r = returnsCalc(), t = targetCalc(), c = cashCalc();
+  const t = targetCalc(), c = cashCalc();
   const done = ALL_TASKS.filter(isDone).length;
   const last = day.dashLog[day.dashLog.length - 1];
   const lines = [
@@ -503,8 +415,8 @@ function reportText() {
     `🚚 الشاحنة: زيت ${day.v.oil === 'ok' ? 'سليم' : day.v.oil === 'nok' ? 'مشكل' : '—'} · ماء ${day.v.water === 'ok' ? 'سليم' : day.v.water === 'nok' ? 'مشكل' : '—'} · تبريد ${has(day.v.cold) ? day.v.cold + '°C' : '—'}`,
     `👥 الزيارات: ${last ? fmt(num(last.visits)) : '—'} / ${fmt(num(day.v.clients_planned))}`,
     `🎯 الهدف: ${money(t.a)} / ${money(t.t)} (${t.pct === null ? '—' : t.pct + '%'})`,
-    `📦 فارق مخزون الانطلاق: ${s.filled ? fmt(s.diffUnits) + ' وحدة' : '—'}`,
-    `↩️ الرجوع: نظري ${r.filled ? fmt(r.theo) : '—'} / فعلي ${r.filled ? fmt(r.real) : '—'} · فارق ${r.filled ? fmt(r.diffUnits) : '—'}`,
+    `📦 مخزون الانطلاق: ${matchLabel(day.v.stock_start)}`,
+    `↩️ مخزون الرجوع: ${matchLabel(day.v.returns)}`,
     `💰 المداخيل: ${money(c.collected)} / التطبيق ${money(c.app)} · فارق ${money(c.diff)}`,
   ];
   ['stock_start', 'target', 'returns', 'cash'].forEach((k) => {
@@ -525,19 +437,20 @@ function renderReport() {
 function summarize(d) {
   const done = ALL_TASKS.filter((t) => !!d.checks[t.id]).length;
   const prev = day; day = d; // reuse calculators on an archived day
-  const s = stockStartCalc(), r = returnsCalc(), t = targetCalc(), c = cashCalc();
+  const t = targetCalc(), c = cashCalc();
   day = prev;
+  const ok = (v) => (v === 'ok' ? true : v === 'nok' ? false : null);
+  const stockOk = ok(d.v.stock_start), returnOk = ok(d.v.returns);
   const phasesDone = PHASES.filter((p) => p.tasks.every((x) => !!d.checks[x.id])).length;
   // Points: 10/task, 20/phase, bonuses for clean numbers and target hit (max 460).
   const score = done * 10 + phasesDone * 20
-    + (s.filled && s.diffUnits === 0 ? 30 : 0)
-    + (r.filled && r.diffUnits === 0 ? 30 : 0)
+    + (stockOk ? 30 : 0)
+    + (returnOk ? 30 : 0)
     + (c.diff === 0 ? 30 : 0)
     + (t.pct !== null && t.pct >= 100 ? 50 : 0);
   return {
     date: d.date, done, total: ALL_TASKS.length, score,
-    targetPct: t.pct, stockDiff: s.filled ? s.diffUnits : null,
-    returnDiff: r.filled ? r.diffUnits : null, cashDiff: c.diff,
+    targetPct: t.pct, stockOk, returnOk, cashDiff: c.diff,
   };
 }
 function archive(d) {
@@ -558,7 +471,9 @@ function renderHistory() {
   const targetAvg = avg(last.map((x) => x.targetPct).filter((x) => x !== null));
   const compAvg = avg(last.map((x) => Math.round((x.done / x.total) * 100)));
   const cashIssues = last.filter((x) => x.cashDiff !== null && x.cashDiff !== 0).length;
-  const stockIssues = last.filter((x) => (x.stockDiff || 0) > 0 || (x.returnDiff || 0) > 0).length;
+  const okOf = (x, k, old) => (x[k] !== undefined ? x[k] : x[old] === null || x[old] === undefined ? null : x[old] === 0);
+  const mark = (v) => (v === null ? '—' : v ? '✔' : '✖');
+  const stockIssues = last.filter((x) => okOf(x, 'stockOk', 'stockDiff') === false || okOf(x, 'returnOk', 'returnDiff') === false).length;
   return `<div class="card"><h2>مؤشرات آخر ${last.length} يوم</h2>
       <div class="kpis">
         <div class="kpi"><div class="l">متوسط الانضباط</div><div class="v ${compAvg >= 90 ? 'ok' : 'warn'}">${compAvg ?? '—'}%</div></div>
@@ -572,8 +487,8 @@ function renderHistory() {
         <td>${esc(x.date)}</td>
         <td class="diff ${x.done === x.total ? 'ok' : 'bad'}">${x.done}/${x.total}</td>
         <td class="diff ${cls(x.targetPct, (v) => v >= 100)}">${x.targetPct === null ? '—' : x.targetPct + '%'}</td>
-        <td class="diff ${cls(x.stockDiff, (v) => v === 0)}">${fmt(x.stockDiff)}</td>
-        <td class="diff ${cls(x.returnDiff, (v) => v === 0)}">${fmt(x.returnDiff)}</td>
+        <td class="diff ${cls(okOf(x, 'stockOk', 'stockDiff'), (v) => v)}">${mark(okOf(x, 'stockOk', 'stockDiff'))}</td>
+        <td class="diff ${cls(okOf(x, 'returnOk', 'returnDiff'), (v) => v)}">${mark(okOf(x, 'returnOk', 'returnDiff'))}</td>
         <td class="diff ${cls(x.cashDiff, (v) => v === 0)}">${signed(x.cashDiff)}</td>
       </tr>`).join('')}</tbody></table></div></div>`;
 }
@@ -593,13 +508,10 @@ function renderSettings() {
     </div>
     <div class="card"><h2>القواعد</h2>
       <label class="switch"><input type="checkbox" data-s="strictOrder" ${settings.strictOrder ? 'checked' : ''}> فرض الترتيب (لا تفتح مرحلة قبل إكمال السابقة)</label>
+      <div class="row"><label>أدنى حرارة للتبريد (°C)</label><input class="field" type="number" data-s="minColdTemp" value="${settings.minColdTemp}"></div>
       <div class="row"><label>أقصى حرارة للتبريد (°C)</label><input class="field" type="number" data-s="maxColdTemp" value="${settings.maxColdTemp}"></div>
       <div class="row"><label>أقل عدد لفات ورق</label><input class="field" type="number" data-s="minPaperRolls" value="${settings.minPaperRolls}"></div>
       <div class="row"><label>نقاط متابعة لوحة التحكم</label><input class="field" type="number" data-s="minDashboardChecks" value="${settings.minDashboardChecks}"></div>
-    </div>
-    <div class="card"><h2>قائمة المنتجات الافتراضية</h2>
-      <p class="muted">منتج في كل سطر. تُطبق ابتداءً من اليوم التالي (أو بعد إعادة تعيين اليوم).</p>
-      <textarea class="field" data-s="skus" rows="7">${esc(settings.skus.join('\n'))}</textarea>
     </div>
     <div class="card"><h2>التذكيرات</h2>
       ${PHASES.map((p) => `<div class="row"><label>${esc(p.title)}</label><input class="field" type="time" data-rem="${p.id}" value="${esc(settings.reminders[p.id] || '')}"></div>`).join('')}
@@ -705,7 +617,7 @@ function refreshTaskState(t) {
   $('.ready-msg', el).innerHTML = ready === true ? '' : `<div class="alert warn">${esc(ready)}</div>`;
   const cond = $(`[data-cond="${t.id}"]`, el);
   if (cond && COND[t.id]) cond.hidden = !COND[t.id]();
-  const out = { stock_start: stockStartSummary, target: targetSummary, returns: returnsSummary, cash: cashSummary };
+  const out = { target: targetSummary, cash: cashSummary };
   if (out[t.id]) {
     const o = $(`[data-out="${t.id}"]`, el);
     if (o) o.innerHTML = out[t.id]();
@@ -713,20 +625,6 @@ function refreshTaskState(t) {
   renderHeader();
 }
 
-function refreshStockCells(i) {
-  const r = day.stock[i];
-  const setDiff = (sel, d) => {
-    const c = $(sel);
-    if (!c) return;
-    c.textContent = signed(d);
-    c.className = `diff ${d === null ? '' : d === 0 ? 'ok' : 'bad'}`;
-  };
-  setDiff(`[data-diff="s${i}"]`, has(r.app) && has(r.phys) ? num(r.phys) - num(r.app) : null);
-  const theo = has(r.phys) && has(r.sold) ? num(r.phys) - num(r.sold) : null;
-  const tc = $(`[data-theo="${i}"]`);
-  if (tc) tc.textContent = fmt(theo);
-  setDiff(`[data-diff="r${i}"]`, theo !== null && has(r.ret) ? num(r.ret) - theo : null);
-}
 
 
 /* ---------- Events ---------- */
@@ -740,13 +638,6 @@ document.addEventListener('input', (e) => {
     const owner = ALL_TASKS.find((t) => t.id === id)
       || ALL_TASKS.find((t) => el.closest(`#task-${t.id}`));
     if (owner) refreshTaskState(owner);
-  } else if (el.dataset.stock !== undefined) {
-    const i = Number(el.dataset.stock);
-    day.stock[i][el.dataset.f] = el.value;
-    persist();
-    refreshStockCells(i);
-    refreshTaskState(ALL_TASKS.find((t) => t.id === 'stock_start'));
-    if ($('#task-returns')) refreshTaskState(ALL_TASKS.find((t) => t.id === 'returns'));
   }
 });
 
@@ -756,12 +647,9 @@ document.addEventListener('change', (e) => {
     day.checks[el.dataset.check] = el.checked;
     persist();
     render();
-  } else if (el.dataset.stock !== undefined && el.dataset.f === 'name') {
-    render();
   } else if (el.dataset.s) {
     const k = el.dataset.s;
     if (el.type === 'checkbox') settings[k] = el.checked;
-    else if (k === 'skus') settings.skus = el.value.split('\n').map((s) => s.trim()).filter(Boolean);
     else if (el.type === 'number') settings[k] = Number(el.value) || 0;
     else settings[k] = el.value.trim();
     save(KEY_SETTINGS, settings);
@@ -804,14 +692,6 @@ document.addEventListener('click', async (e) => {
   const act = actEl?.dataset.act;
   if (!act) return;
   switch (act) {
-    case 'add-sku':
-      day.stock.push({ name: '', app: '', phys: '', sold: '', ret: '' });
-      persist(); render(); break;
-    case 'del-sku': {
-      const i = Number(e.target.closest('[data-i]').dataset.i);
-      if (armed(actEl, 'تأكيد؟')) { day.stock.splice(i, 1); persist(); render(); }
-      break;
-    }
     case 'dash-log':
       day.dashLog.push({ time: nowHM(), visits: day.v.dash_visits || '', sales: day.v.dash_sales || '' });
       persist(); render(); break;

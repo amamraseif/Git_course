@@ -1,5 +1,5 @@
-const CACHE = 'yawm-bae-v2';
-const ASSETS = ['./', './index.html', './styles.css', './app.js', './focus.js', './manifest.json', './icon.svg'];
+const CACHE = 'yawm-bae-v3';
+const ASSETS = ['./', './index.html', './styles.css', './app.js', './focus.js', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
@@ -13,22 +13,19 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Offline-first: serve from cache, refresh cache in the background.
+// Network-first: testers always get the latest version; the cache keeps the app working offline.
 self.addEventListener('fetch', (e) => {
-  if (e.request.method !== 'GET') return;
+  if (e.request.method !== 'GET' || new URL(e.request.url).origin !== self.location.origin) return;
   e.respondWith(
-    caches.match(e.request).then((cached) => {
-      const network = fetch(e.request)
-        .then((res) => {
-          if (res.ok && new URL(e.request.url).origin === self.location.origin) {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(e.request, copy));
-          }
-          return res;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(e.request)
+      .then((res) => {
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy));
+        }
+        return res;
+      })
+      .catch(() => caches.match(e.request, { ignoreSearch: true }))
   );
 });
 

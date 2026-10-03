@@ -22,11 +22,11 @@ const HABIT = {
   app_session: ['🔄', 'مزامنة الأسعار والعروض = لا أخطاء في الفوترة.', 2],
   clients: ['🗺️', 'من يعرف جولته يبيع أكثر ويضيّع وقتاً أقل.', 3],
   steps: ['🎯', 'المحترف يكرر نفس الخطوات في كل زيارة — هذا سرّ النتائج.', 2],
-  stock_start: ['📦', 'ما تحمله في الشاحنة هو ما ستُحاسَب عليه مساءً.', 10],
+  stock_start: ['📦', 'ما تحمله في الشاحنة هو ما ستُحاسَب عليه مساءً.', 3],
   dashboard: ['📊', 'من يقيس تقدمه أثناء اليوم يصحّح قبل فوات الأوان.', 2],
   market: ['📣', 'معلومة من الميدان اليوم = قرار أفضل للفريق غداً.', 3],
   target: ['🏆', 'الهدف المحقق يُبنى زيارة بعد زيارة.', 1],
-  returns: ['↩️', 'رجوع مطابق = لا عجز ولا شك.', 10],
+  returns: ['↩️', 'رجوع مطابق = لا عجز ولا شك.', 3],
   cash: ['💰', 'صندوق مطابق = راحة بال ومصداقية.', 5],
   report: ['📨', 'إغلاق اليوم بتقرير واضح يبني ثقة المشرف.', 1],
 };
@@ -81,6 +81,7 @@ function habitStats() {
   return { streak, missedLast, total, level, nextLevel, yesterday, todayScore };
 }
 
+let lastCardId = null;
 const nextTask = () => ALL_TASKS.find((t) => !isDone(t));
 const phaseOf = (t) => PHASES.find((p) => p.id === t.phase);
 
@@ -151,13 +152,15 @@ function renderFocusTask(t) {
   const ready = readiness(t);
   const after = ALL_TASKS.slice(idx + 1).find((x) => !isDone(x));
   const hm = new Date().toTimeString().slice(0, 5);
+  const enter = lastCardId !== t.id; // animate only when a new task arrives, not on every re-render
+  lastCardId = t.id;
   const onRoad = t.phase === 'p6' && day.dashLog.length === 0 && settings.reminders.p6 && hm < settings.reminders.p6;
 
   return `<section class="focus">
     ${statChips(st)}
     ${renderDots(t)}
     ${onRoad ? `<div class="road">🚚 أنت الآن في الجولة — بالتوفيق!<br>سأذكّرك الساعة <b>${esc(settings.reminders.p6)}</b> لمتابعة لوحة التحكم.</div>` : ''}
-    <article class="f-card task" id="task-${t.id}">
+    <article class="f-card task ${enter ? 'enter' : ''}" id="task-${t.id}">
       <div class="f-phase">المرحلة ${pIdx + 1}/${PHASES.length} · ${esc(p.title)}</div>
       <div class="f-icon">${icon}</div>
       <div class="f-step">الخطوة ${idx + 1} من ${ALL_TASKS.length} · ⏱ ${mins} د</div>

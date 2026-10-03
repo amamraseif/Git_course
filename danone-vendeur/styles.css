@@ -60,6 +60,7 @@ body {
   font-size: 16px;
   line-height: 1.5;
   padding-bottom: 48px;
+  overflow-x: clip;
 }
 button, input, textarea, select { font: inherit; color: inherit; }
 
@@ -250,10 +251,11 @@ pre.report { white-space: pre-wrap; direction: rtl; margin: 0; font-family: inhe
 /* Task card */
 .f-card {
   background: var(--card); border: 1px solid var(--line); border-radius: 22px;
-  padding: 18px 16px; text-align: center; animation: slideIn .35s ease-out;
+  padding: 18px 16px; text-align: center;
   box-shadow: 0 8px 24px rgba(0, 0, 0, .06);
 }
 .f-card.done { background: var(--card); }
+.f-card.enter { animation: slideIn .35s ease-out; }
 .f-phase { display: inline-block; font-size: .8rem; font-weight: 700; color: var(--brand); background: var(--bg); border-radius: 99px; padding: 3px 12px; }
 .f-icon { font-size: 3.6rem; line-height: 1.2; margin: 10px 0 2px; }
 .f-step { font-size: .85rem; color: var(--muted); }
