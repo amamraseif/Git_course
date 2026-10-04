@@ -140,6 +140,7 @@ function renderIntro() {
   return `<section class="stack">
     <article class="blob intro enter">
       ${badge(st)}
+      <img class="intro-logo" src="fennec-logo.png" alt="Fennec" width="96" height="96">
       <div class="eyebrow" dir="ltr">${new Date().getHours() < 18 ? 'Bonjour' : 'Bonsoir'} · ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
       <h2 class="display">${greeting()}</h2>
       <div class="become">

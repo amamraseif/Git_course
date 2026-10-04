@@ -1,7 +1,7 @@
 'use strict';
 
 /* ============================================================
-   تطبيق البائع V2 — دانون جرجرة: مهام البائع اليومية (تطبيق ويب يعمل دون إنترنت)
+   Fennec V2 — دانون جرجرة: مهام البائع اليومية (تطبيق ويب يعمل دون إنترنت)
    البيانات محفوظة محلياً على الهاتف (localStorage).
    ============================================================ */
 
@@ -590,8 +590,8 @@ function renderSettings() {
   const txt = (k, l, type = 'text', ph = '') =>
     `<div class="row"><label>${l}</label><input class="field" type="${type}" data-s="${k}" value="${esc(settings[k])}" placeholder="${esc(ph)}"></div>`;
   const perm = 'Notification' in window ? Notification.permission : 'unsupported';
-  return `<div class="card version"><h2>تطبيق البائع <span class="ver">V2</span></h2>
-      <p class="muted">النسخة السابقة محفوظة ويمكن الرجوع إليها في أي وقت: <a href="v1/">تطبيق البائع v1</a> (بياناتك مشتركة بين النسختين).</p>
+  return `<div class="card version"><h2><img class="ver-logo" src="fennec-logo.png" alt="" width="40" height="40"> Fennec <span class="ver">V2</span></h2>
+      <p class="muted">النسخة السابقة محفوظة ويمكن الرجوع إليها في أي وقت: <a href="v1/">v1 (تطبيق البائع)</a> (بياناتك مشتركة بين النسختين).</p>
     </div>
     <div class="card"><h2>البائع</h2>
       ${txt('name', 'الاسم')}
@@ -648,8 +648,8 @@ async function notify(title, body) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   try {
     const reg = await navigator.serviceWorker?.getRegistration();
-    if (reg) reg.showNotification(title, { body, icon: 'icon.svg', tag: title, lang: 'ar', dir: 'rtl' });
-    else new Notification(title, { body, icon: 'icon.svg' });
+    if (reg) reg.showNotification(title, { body, icon: 'icon-192.png', badge: 'icon-192.png', tag: title, lang: 'ar', dir: 'rtl' });
+    else new Notification(title, { body, icon: 'icon-192.png' });
   } catch (_) { /* ignore */ }
 }
 
@@ -824,7 +824,7 @@ document.addEventListener('click', async (e) => {
       if (!('Notification' in window)) { flash(actEl, 'غير مدعومة في هذا المتصفح'); break; }
       await Notification.requestPermission();
       render();
-      if (Notification.permission === 'granted') notify('يوم البائع', 'الإشعارات مفعّلة ✔');
+      if (Notification.permission === 'granted') notify('Fennec', 'الإشعارات مفعّلة ✔');
       break;
     case 'ics':
       exportICS(); break;

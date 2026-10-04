@@ -1,5 +1,5 @@
 /* ============================================================
-   تطبيق البائع V2 — هوية دانون جرجرة
+   Fennec V2 — هوية دانون جرجرة
    Layout: one tall "blob" card per task on a milk-white ground,
    week strip on top, floating pill tab bar at the bottom.
    ============================================================ */
@@ -79,10 +79,9 @@ a { color: var(--brand); }
 .who { flex: 1; min-width: 0; }
 .who-name { font-weight: 700; font-size: 1.05rem; }
 .who-sub { font-size: .82rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.brand { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 99px; background: var(--brand-deep); color: #fff; }
-.brand-logo { height: 22px; width: auto; }
-.brand-name { font-family: var(--display); font-weight: 700; font-size: .95rem; white-space: nowrap; }
-.brand-name::before { content: "★"; color: var(--accent); margin-inline-end: 6px; font-family: var(--ui); }
+.brand { display: flex; align-items: center; gap: 8px; padding: 4px; padding-inline-end: 14px; border-radius: 99px; background: var(--brand-deep); color: #fff; }
+.brand-logo { width: 34px; height: 34px; border-radius: 10px; display: block; }
+.brand-name { font-weight: 700; font-size: 1rem; letter-spacing: .04em; white-space: nowrap; }
 
 .week { display: grid; grid-template-columns: repeat(7, 1fr); margin-top: 16px; border-bottom: 1px solid var(--line); }
 .wd { display: flex; flex-direction: column; align-items: center; gap: 2px; padding-bottom: 10px; position: relative; color: var(--muted); }
@@ -188,6 +187,8 @@ main { max-width: 640px; margin: 0 auto; padding: 22px 16px 0; }
 .first-step { margin: 20px auto 0; padding: 14px 16px; border-radius: 22px; border: 1.5px dashed color-mix(in srgb, var(--brand) 45%, transparent); max-width: 360px; }
 .fs-k { color: var(--muted); font-size: .82rem; }
 .fs-v { font-family: var(--display); font-size: 1.35rem; font-weight: 700; }
+.intro-logo { display: block; width: 96px; height: 96px; margin: -24px auto 10px; border-radius: 24px; box-shadow: 0 12px 26px rgba(0, 51, 168, .3); }
+.ver-logo { width: 40px; height: 40px; border-radius: 11px; vertical-align: middle; }
 .trophy { font-size: 3.6rem; line-height: 1; margin-bottom: 4px; animation: pop .6s cubic-bezier(.2, 1.6, .4, 1); }
 .intro .kpis { text-align: right; margin-top: 16px; }
 
@@ -346,7 +347,9 @@ pre.report { white-space: pre-wrap; direction: rtl; margin: 0; font-family: inhe
 @keyframes pop { 0% { transform: scale(.4); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes rise { from { transform: translateY(24px) scale(.98); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
-  .blob.enter, .cel-box, .trophy { animation: none; }
+  .blob.enter, .cel-box, .intro-logo { display: block; width: 96px; height: 96px; margin: -24px auto 10px; border-radius: 24px; box-shadow: 0 12px 26px rgba(0, 51, 168, .3); }
+.ver-logo { width: 40px; height: 40px; border-radius: 11px; vertical-align: middle; }
+.trophy { animation: none; }
   .confetti { display: none; }
   .steps-track { scroll-behavior: auto; }
 }

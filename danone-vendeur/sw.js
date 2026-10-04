@@ -1,4 +1,4 @@
-const CACHE = 'tatbiq-al-baee-v2-1';
+const CACHE = 'fennec-v2-2';
 const ASSETS = [
   './',
   './index.html',
@@ -6,7 +6,8 @@ const ASSETS = [
   './app.js',
   './focus.js',
   './manifest.json',
-  './icon.svg',
+  './fennec-logo.png',
+  './icon-maskable-512.png',
   './icon-192.png',
   './icon-512.png',
   './apple-touch-icon.png',
