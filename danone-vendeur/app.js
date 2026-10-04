@@ -115,7 +115,9 @@ function save(key, val) {
   try { localStorage.setItem(key, JSON.stringify(val)); } catch (_) { /* storage full / blocked */ }
 }
 
-const todayKey = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD (local)
+// Local date as YYYY-MM-DD, built by hand: locale formats differ between browsers.
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const todayKey = () => ymd(new Date());
 
 let settings = { ...DEFAULT_SETTINGS, ...load(KEY_SETTINGS, {}) };
 settings.reminders = { ...DEFAULT_SETTINGS.reminders, ...(settings.reminders || {}) };
@@ -132,10 +134,17 @@ function newDay() {
 }
 
 let day = load(KEY_DAY, null);
-if (!day || day.date !== todayKey()) {
-  if (day) archive(day);
+
+// Archive a finished day and open today. Called at boot (after every helper is defined),
+// on a timer and when the app comes back to the foreground.
+function ensureToday() {
+  if (day && day.date === todayKey() && day.checks && day.v) return false;
+  if (day && day.date) {
+    try { archive(day); } catch (_) { /* an unreadable old day must never block today */ }
+  }
   day = newDay();
   save(KEY_DAY, day);
+  return true;
 }
 
 function persist() {
@@ -259,7 +268,7 @@ function renderHeader() {
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    const k = d.toLocaleDateString('en-CA');
+    const k = ymd(d);
     const off = d.getDay() === Number(settings.offDay);
     const rec = i === 0 ? { done, total: ALL_TASKS.length } : h[k];
     const state = off ? 'off' : rec && rec.done === rec.total ? 'full' : rec && rec.done > 0 ? 'part' : 'none';
@@ -532,6 +541,27 @@ function renderHistory() {
 }
 
 /* ---------- Settings ---------- */
+/* ---------- Install (home-screen app) ---------- */
+let installEvt = null; // Android/desktop Chrome hands us this when the app can be installed
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  installEvt = e;
+  if (currentView === 'settings') render();
+});
+window.addEventListener('appinstalled', () => { installEvt = null; if (currentView === 'settings') render(); });
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+function renderInstallCard() {
+  let body;
+  if (isStandalone()) body = '<div class="alert ok">Fennec مثبّت على هذا الهاتف ✔</div>';
+  else if (installEvt) body = '<button class="cta done-btn" data-act="install">⬇ تثبيت Fennec على الهاتف</button>';
+  else if (isIOS()) body = `<ol class="install-steps"><li>افتح الرابط في <b>Safari</b>.</li><li>اضغط زر المشاركة <b>⬆</b> أسفل الشاشة.</li><li>اختر <b>إضافة إلى الشاشة الرئيسية</b> ثم <b>إضافة</b>.</li></ol>`;
+  else body = `<ol class="install-steps"><li>افتح الرابط في <b>Google Chrome</b>.</li><li>اضغط القائمة <b>⋮</b> أعلى الشاشة.</li><li>اختر <b>تثبيت التطبيق</b> أو <b>إضافة إلى الشاشة الرئيسية</b>.</li></ol>
+      <p class="muted">إذا ظهر «فتح» بدل «تثبيت» فالتطبيق مثبّت مسبقاً: احذف الأيقونة القديمة ثم أعد التثبيت.</p>`;
+  return `<div class="card"><h2>تثبيت التطبيق</h2>${body}</div>`;
+}
+
 /* ---------- Sales steps carousel (swipe) ---------- */
 function renderStepsCarousel(big = false) {
   const n = SALES_STEPS.length;
@@ -594,6 +624,7 @@ function renderSettings() {
     <div class="card version"><h2><img class="ver-logo" src="fennec-logo.png" alt="" width="40" height="40"> Fennec <span class="ver">V2</span></h2>
       <p class="muted">النسخة السابقة محفوظة ويمكن الرجوع إليها في أي وقت: <a href="v1/">v1 (تطبيق البائع)</a> (بياناتك مشتركة بين النسختين).</p>
     </div>
+    ${renderInstallCard()}
     <div class="card"><h2>البائع</h2>
       ${txt('name', 'الاسم')}
       ${txt('code', 'رمز البائع')}
@@ -789,6 +820,14 @@ document.addEventListener('click', async (e) => {
   const act = actEl?.dataset.act;
   if (!act) return;
   switch (act) {
+    case 'install':
+      if (installEvt) {
+        installEvt.prompt();
+        try { await installEvt.userChoice; } catch (_) { /* dismissed */ }
+        installEvt = null;
+        render();
+      }
+      break;
     case 'step-next':
     case 'step-prev': {
       const track = actEl.closest('.steps-wrap').querySelector('[data-steps]');
@@ -834,17 +873,14 @@ document.addEventListener('click', async (e) => {
 
 /* ---------- Day rollover & boot ---------- */
 setInterval(() => {
-  if (day.date !== todayKey()) {
-    archive(day);
-    day = newDay();
-    save(KEY_DAY, day);
-    render();
-  }
+  if (ensureToday()) render();
   checkReminders();
 }, 30000);
 
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') checkReminders();
+  if (document.visibilityState !== 'visible') return;
+  if (ensureToday()) render();
+  checkReminders();
 });
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {

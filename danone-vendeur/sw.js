@@ -1,4 +1,4 @@
-const CACHE = 'fennec-v2-3';
+const CACHE = 'fennec-v2-4';
 const ASSETS = [
   './',
   './index.html',

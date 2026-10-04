@@ -265,5 +265,6 @@ function switchView(v) {
 }
 
 /* ---------- Boot ---------- */
+ensureToday();
 render();
 checkReminders();

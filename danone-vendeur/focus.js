@@ -64,7 +64,7 @@ function habitStats() {
   for (let i = 1; i < 400; i++) {
     x.setDate(x.getDate() - 1);
     if (x.getDay() === Number(settings.offDay)) continue;
-    const k = x.toLocaleDateString('en-CA');
+    const k = ymd(x);
     if (!oldest || k < oldest) break; // before the app was first used
     if (full(k)) { streak++; continue; }
     missedLast = streak === (full(today) ? 1 : 0); // the very last workday was missed
@@ -310,5 +310,20 @@ function switchView(v) {
 }
 
 /* ---------- Boot ---------- */
-render();
-checkReminders();
+function boot() {
+  try {
+    ensureToday();
+    render();
+    checkReminders();
+  } catch (err) {
+    // Never leave a blank screen: offer to restart the day (settings and history are kept).
+    $('#view').innerHTML = `<section class="stack"><article class="blob intro">
+      <h2 class="display">تعذّر فتح بيانات اليوم</h2>
+      <p class="intro-msg">اضغط الزر لإعادة فتح اليوم. إعداداتك وسجلّك محفوظان.</p>
+      <button class="cta" id="recover">إعادة فتح اليوم</button>
+      <p class="muted" dir="ltr">${esc(err && err.message)}</p>
+    </article></section>`;
+    $('#recover').onclick = () => { try { localStorage.removeItem(KEY_DAY); } catch (_) { /* ignore */ } location.reload(); };
+  }
+}
+boot();

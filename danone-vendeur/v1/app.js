@@ -118,10 +118,16 @@ function newDay() {
 }
 
 let day = load(KEY_DAY, null);
-if (!day || day.date !== todayKey()) {
-  if (day) archive(day);
+
+// Archive a finished day and open today. Called at boot, once every helper is defined.
+function ensureToday() {
+  if (day && day.date === todayKey() && day.checks && day.v) return false;
+  if (day && day.date) {
+    try { archive(day); } catch (_) { /* an unreadable old day must never block today */ }
+  }
   day = newDay();
   save(KEY_DAY, day);
+  return true;
 }
 
 function persist() {
@@ -729,12 +735,7 @@ document.addEventListener('click', async (e) => {
 
 /* ---------- Day rollover & boot ---------- */
 setInterval(() => {
-  if (day.date !== todayKey()) {
-    archive(day);
-    day = newDay();
-    save(KEY_DAY, day);
-    render();
-  }
+  if (ensureToday()) render();
   checkReminders();
 }, 30000);
 
