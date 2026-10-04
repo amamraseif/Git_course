@@ -590,7 +590,8 @@ function renderSettings() {
   const txt = (k, l, type = 'text', ph = '') =>
     `<div class="row"><label>${l}</label><input class="field" type="${type}" data-s="${k}" value="${esc(settings[k])}" placeholder="${esc(ph)}"></div>`;
   const perm = 'Notification' in window ? Notification.permission : 'unsupported';
-  return `<div class="card version"><h2><img class="ver-logo" src="fennec-logo.png" alt="" width="40" height="40"> Fennec <span class="ver">V2</span></h2>
+  return `<img class="brand-banner" src="brand/logo.png" alt="Danone — لي علينا، صحّة لي عزاز عليكم" onerror="this.remove()">
+    <div class="card version"><h2><img class="ver-logo" src="fennec-logo.png" alt="" width="40" height="40"> Fennec <span class="ver">V2</span></h2>
       <p class="muted">النسخة السابقة محفوظة ويمكن الرجوع إليها في أي وقت: <a href="v1/">v1 (تطبيق البائع)</a> (بياناتك مشتركة بين النسختين).</p>
     </div>
     <div class="card"><h2>البائع</h2>

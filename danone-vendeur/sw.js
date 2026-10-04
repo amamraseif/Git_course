@@ -1,4 +1,4 @@
-const CACHE = 'fennec-v2-2';
+const CACHE = 'fennec-v2-3';
 const ASSETS = [
   './',
   './index.html',
@@ -7,6 +7,7 @@ const ASSETS = [
   './focus.js',
   './manifest.json',
   './fennec-logo.png',
+  './brand/logo.png',
   './icon-maskable-512.png',
   './icon-192.png',
   './icon-512.png',
